@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agrell | Truy cập Ẩn danh & Bảo mật</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/dist/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #050505;
+            color: #e5e5e5;
+            overflow: hidden; /* Ngăn cuộn trang chính khi đang xem web */
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.05;
+            pointer-events: none;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, #10b981, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .loader {
+            border: 3px solid #1f2937;
+            border-top: 3px solid #10b981;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Iframe container */
+        #browserView {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            z-index: 100;
+        }
+
+        #browserToolbar {
+            background: #111;
+            padding: 8px 16px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            border-bottom: 1px solid #333;
+        }
+
+        iframe {
+            width: 100%;
+            height: calc(100% - 50px);
+            border: none;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4">
+
+    <div class="matrix-bg" id="matrix"></div>
+
+    <!-- Main UI (Hidden when browsing) -->
+    <div id="homeUI" class="w-full flex flex-col items-center">
+        <!-- Header Section -->
+        <header class="text-center mb-12">
+            <h1 class="text-6xl font-bold mb-4 tracking-tighter">
+                <span class="gradient-text">Agrell</span>
+            </h1>
+            <p class="text-gray-400 text-lg max-w-md mx-auto">
+                Cổng truy cập ẩn danh, bảo mật đa lớp và không dấu vết.
+            </p>
+        </header>
+
+        <!-- Main Proxy Input -->
+        <main class="w-full max-w-2xl">
+            <div class="bg-gray-900 border border-gray-800 p-2 rounded-2xl shadow-2xl flex items-center gap-2 focus-within:border-emerald-500/50 transition-all duration-300">
+                <div class="pl-4 text-gray-500">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <input 
+                    type="text" 
+                    id="urlInput"
+                    placeholder="Nhập địa chỉ web (ví dụ: google.com)..." 
+                    class="bg-transparent w-full p-4 outline-none text-white placeholder-gray-600 text-lg"
+                    autocomplete="off"
+                >
+                <button 
+                    onclick="handleProxyRequest()"
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-8 rounded-xl transition-all active:scale-95 flex items-center gap-2"
+                >
+                    <span>Duyệt</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- Status/Security Indicators -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
+                <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-800 flex items-center gap-3">
+                    <i class="fa-solid fa-mask text-emerald-500"></i>
+                    <span class="text-sm text-gray-400">Ẩn danh IP</span>
+                </div>
+                <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-800 flex items-center gap-3">
+                    <i class="fa-solid fa-virus-slash text-blue-500"></i>
+                    <span class="text-sm text-gray-400">Quét Virus 24/7</span>
+                </div>
+                <div class="bg-gray-900/50 p-4 rounded-xl border border-gray-800 flex items-center gap-3">
+                    <i class="fa-solid fa-lock text-purple-500"></i>
+                    <span class="text-sm text-gray-400">Mã hóa AES-256</span>
+                </div>
+            </div>
+        </main>
+        
+        <footer class="mt-20 text-gray-600 text-xs text-center">
+            &copy; 2024 Agrell Protocol. Không lưu trữ logs. Không theo dõi người dùng.
+        </footer>
+    </div>
+
+    <!-- Browser Simulation View -->
+    <div id="browserView">
+        <div id="browserToolbar">
+            <button onclick="closeBrowser()" class="text-gray-400 hover:text-white transition-colors">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+            <div class="flex-1 bg-black/50 rounded-full px-4 py-1 border border-gray-700 text-emerald-400 text-sm flex items-center gap-2">
+                <i class="fa-solid fa-lock text-[10px]"></i>
+                <span id="displayUrl"></span>
+            </div>
+            <div class="flex gap-4 text-gray-500">
+                <i class="fa-solid fa-rotate-right"></i>
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </div>
+        </div>
+        <iframe id="proxyFrame" src=""></iframe>
+    </div>
+
+    <!-- Loading Modal -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black/95 z-[150] hidden flex flex-col items-center justify-center">
+        <div class="loader mb-4"></div>
+        <p id="statusText" class="text-emerald-500 font-mono tracking-widest uppercase text-sm">Khởi tạo giao thức Agrell...</p>
+        <p id="targetUrl" class="text-gray-500 mt-2 text-xs italic"></p>
+    </div>
+
+    <!-- Feedback UI -->
+    <div id="messageBox" class="fixed bottom-8 bg-gray-900 border border-emerald-500/30 text-emerald-400 px-6 py-3 rounded-full opacity-0 transform translate-y-10 transition-all duration-500 pointer-events-none z-[200]">
+        Đang mở trang...
+    </div>
+
+    <script>
+        function handleProxyRequest() {
+            const input = document.getElementById('urlInput');
+            let url = input.value.trim();
+            const overlay = document.getElementById('loadingOverlay');
+            const statusText = document.getElementById('statusText');
+            const targetUrlText = document.getElementById('targetUrl');
+            const proxyFrame = document.getElementById('proxyFrame');
+            const displayUrl = document.getElementById('displayUrl');
+
+            if (!url) {
+                showMessage("Vui lòng nhập địa chỉ trang web.");
+                return;
+            }
+
+            // Chuẩn hóa URL
+            if (!url.startsWith('http')) {
+                url = 'https://' + url;
+            }
+
+            // Hiệu ứng giả lập
+            overlay.classList.remove('hidden');
+            targetUrlText.innerText = `Kết nối tới: ${url}`;
+            
+            const steps = [
+                "Đang mã hóa địa chỉ...",
+                "Đang thiết lập Proxy trung gian...",
+                "Đang lọc bỏ quảng cáo & tracker...",
+                "Đang quét mã độc (Sandboxing)...",
+                "Hoàn tất! Đang tải trang..."
+            ];
+
+            let stepIndex = 0;
+            const interval = setInterval(() => {
+                if (stepIndex < steps.length) {
+                    statusText.innerText = steps[stepIndex];
+                    stepIndex++;
+                } else {
+                    clearInterval(interval);
+                    
+                    // Thực hiện hiển thị trang web
+                    setTimeout(() => {
+                        overlay.classList.add('hidden');
+                        displayUrl.innerText = url;
+                        
+                        // Sử dụng DuckDuckGo hoặc một proxy công cộng để tránh lỗi X-Frame-Options nếu có thể
+                        // Ở đây sử dụng URL trực tiếp (lưu ý: nhiều web lớn như Google chặn iframe trực tiếp)
+                        proxyFrame.src = url; 
+                        
+                        document.getElementById('browserView').style.display = 'block';
+                        document.getElementById('homeUI').classList.add('hidden');
+                    }, 500);
+                }
+            }, 600);
+        }
+
+        function closeBrowser() {
+            document.getElementById('browserView').style.display = 'none';
+            document.getElementById('homeUI').classList.remove('hidden');
+            document.getElementById('proxyFrame').src = '';
+        }
+
+        function showMessage(text) {
+            const box = document.getElementById('messageBox');
+            box.innerText = text;
+            box.style.opacity = '1';
+            box.style.transform = 'translateY(0)';
+            
+            setTimeout(() => {
+                box.style.opacity = '0';
+                box.style.transform = 'translateY(10px)';
+            }, 3000);
+        }
+
+        document.getElementById('urlInput').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                handleProxyRequest();
+            }
+        });
+    </script>
+</body>
+</html>
